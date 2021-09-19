@@ -86,6 +86,13 @@ func updateTodo(w http.ResponseWriter, r *http.Request) {
 	}
 	f.Close()
 }
+
+func (h *todoList) OnInputChange(ctx app.Context, e app.Event) {
+}
+
+func (h *todoList) OnDoneChange(ctx app.Context, e app.Event) {
+}
+
 func main() {
 	app.Route("/", &todoList{})
 
@@ -113,10 +120,4 @@ func main() {
 	if err := http.ListenAndServe(":8000", nil); err != nil {
 		log.Fatal(err)
 	}
-}
-
-func (h *todoList) OnInputChange(ctx app.Context, e app.Event) {
-}
-
-func (h *todoList) OnDoneChange(ctx app.Context, e app.Event) {
 }
