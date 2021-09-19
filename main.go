@@ -116,10 +116,14 @@ func (h *todoList) OnDoneChange(ctx app.Context, e app.Event) {
 	defer resp.Body.Close()
 }
 
+func httpError(w http.ResponseWriter) {
+	http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+}
+
 func listTodo(w http.ResponseWriter, r *http.Request) {
 	f, err := os.Open("todo.json")
 	if err != nil {
-		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		httpError(w)
 		return
 	}
 	defer f.Close()
@@ -127,14 +131,14 @@ func listTodo(w http.ResponseWriter, r *http.Request) {
 	var items []item
 	err = json.NewDecoder(f).Decode(&items)
 	if err != nil {
-		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		httpError(w)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	err = json.NewEncoder(w).Encode(&items)
 	if err != nil {
-		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		httpError(w)
 		return
 	}
 }
@@ -143,19 +147,19 @@ func updateTodo(w http.ResponseWriter, r *http.Request) {
 	var v item
 	err := json.NewDecoder(r.Body).Decode(&v)
 	if err != nil {
-		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		httpError(w)
 		return
 	}
 
 	f, err := os.Open("todo.json")
 	if err != nil {
-		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		httpError(w)
 		return
 	}
 	var items []item
 	err = json.NewDecoder(f).Decode(&items)
 	if err != nil {
-		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		httpError(w)
 		return
 	}
 	f.Close()
@@ -173,12 +177,12 @@ func updateTodo(w http.ResponseWriter, r *http.Request) {
 	}
 	f, err = os.Create("todo.json")
 	if err != nil {
-		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		httpError(w)
 		return
 	}
 	err = json.NewEncoder(f).Encode(&items)
 	if err != nil {
-		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		httpError(w)
 		return
 	}
 	f.Close()
