@@ -116,6 +116,74 @@ func (h *todoList) OnDoneChange(ctx app.Context, e app.Event) {
 	defer resp.Body.Close()
 }
 
+func listTodo(w http.ResponseWriter, r *http.Request) {
+	f, err := os.Open("todo.json")
+	if err != nil {
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
+	}
+	defer f.Close()
+
+	var items []item
+	err = json.NewDecoder(f).Decode(&items)
+	if err != nil {
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	err = json.NewEncoder(w).Encode(&items)
+	if err != nil {
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
+	}
+}
+
+func updateTodo(w http.ResponseWriter, r *http.Request) {
+	var v item
+	err := json.NewDecoder(r.Body).Decode(&v)
+	if err != nil {
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
+	}
+
+	f, err := os.Open("todo.json")
+	if err != nil {
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
+	}
+	var items []item
+	err = json.NewDecoder(f).Decode(&items)
+	if err != nil {
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
+	}
+	f.Close()
+
+	found := false
+	for i, vv := range items {
+		if vv.ID == v.ID {
+			items[i].Done = v.Done
+			found = true
+			break
+		}
+	}
+	if !found {
+		items = append(items, item{ID: len(items) + 1, Text: v.Text})
+	}
+	f, err = os.Create("todo.json")
+	if err != nil {
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
+	}
+	err = json.NewEncoder(f).Encode(&items)
+	if err != nil {
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
+	}
+	f.Close()
+}
+
 func main() {
 	app.Route("/", &todoList{})
 
@@ -132,71 +200,13 @@ func main() {
 	var mu sync.Mutex
 	http.HandleFunc("/api", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodGet {
-			f, err := os.Open("todo.json")
-			if err != nil {
-				http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-				return
-			}
-			defer f.Close()
-
-			var items []item
-			err = json.NewDecoder(f).Decode(&items)
-			if err != nil {
-				http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-				return
-			}
-
-			w.Header().Set("Content-Type", "application/json")
-			err = json.NewEncoder(w).Encode(&items)
-			if err != nil {
-				http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-				return
-			}
-		} else if r.Method == http.MethodPost {
-			var v item
-			err := json.NewDecoder(r.Body).Decode(&v)
-			if err != nil {
-				http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-				return
-			}
 			mu.Lock()
 			defer mu.Unlock()
-
-			f, err := os.Open("todo.json")
-			if err != nil {
-				http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-				return
-			}
-			var items []item
-			err = json.NewDecoder(f).Decode(&items)
-			if err != nil {
-				http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-				return
-			}
-			f.Close()
-
-			found := false
-			for i, vv := range items {
-				if vv.ID == v.ID {
-					items[i].Done = v.Done
-					found = true
-					break
-				}
-			}
-			if !found {
-				items = append(items, item{ID: len(items) + 1, Text: v.Text})
-			}
-			f, err = os.Create("todo.json")
-			if err != nil {
-				http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-				return
-			}
-			err = json.NewEncoder(f).Encode(&items)
-			if err != nil {
-				http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-				return
-			}
-			f.Close()
+			listTodo(w, r)
+		} else if r.Method == http.MethodPost {
+			mu.Lock()
+			defer mu.Unlock()
+			updateTodo(w, r)
 		}
 	})
 
